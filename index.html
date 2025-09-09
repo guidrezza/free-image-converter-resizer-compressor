@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Free Image Converter, Resizer, and Compressor</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip for creating zip files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- FileSaver.js for saving the zip file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Define custom theme colors and styles */
+        :root {
+            /* Light Mode (default) */
+            --bg-main: #f9fafb; /* gray-50 */
+            --bg-panel: #ffffff; /* white */
+            --bg-panel-light: #f3f4f6; /* gray-100 */
+            --border-color: #e5e7eb; /* gray-200 - for inputs */
+            --divider-color: #f3f4f6; /* gray-100 - much softer for dividers */
+            --text-primary: #1f2937; /* gray-800 */
+            --text-secondary: #6b7281; /* gray-500 */
+            --text-tertiary: #9ca3af; /* gray-400 */
+            --accent-text: #ea580c; /* orange-600 */
+            --accent-text-hover: #c2410c; /* orange-700 */
+            --accent-button: #0ea5e9; /* sky-500 */
+            --accent-button-hover: #0284c7; /* sky-600 */
+            --scrollbar-thumb: #d1d5db; /* gray-300 - More visible */
+        }
+        html.dark {
+             /* Dark Mode Overrides */
+            --bg-main: #18181b;      /* zinc-900 */
+            --bg-panel: #27272a;     /* zinc-800 */
+            --bg-panel-light: #3f3f46;/* zinc-700 */
+            --border-color: #3f3f46; /* zinc-700 */
+            --divider-color: #3f3f46; /* zinc-700 - much softer for dividers */
+            --text-primary: #e4e4e7;   /* zinc-200 */
+            --text-secondary: #a1a1aa; /* zinc-400 */
+            --text-tertiary: #71717a;  /* zinc-500 */
+            --scrollbar-thumb: #3f3f46; /* zinc-700 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        /* Custom scrollbar for a better look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-panel);
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-thumb);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: var(--border-color);
+        }
+        /* Custom input styles */
+        .form-input {
+            background-color: var(--bg-panel-light);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-button) !important;
+            box-shadow: 0 0 0 2px var(--accent-button);
+        }
+        /* Custom select dropdown style */
+        select.form-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7281' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+        .btn-primary {
+            background-color: var(--accent-button);
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background-color: var(--accent-button-hover);
+        }
+        .text-accent {
+            color: var(--accent-text);
+        }
+        .text-accent:hover {
+            color: var(--accent-text-hover);
+        }
+        .divide-divider-color > :not([hidden]) ~ :not([hidden]) {
+            border-color: var(--divider-color);
+        }
+        .border-divider-color {
+            border-color: var(--divider-color);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="drag-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-70 z-50 hidden items-center justify-center pointer-events-none backdrop-blur-sm">
+        <div class="text-center p-8 border-2 border-dashed border-sky-400 rounded-xl">
+            <p class="text-white text-3xl font-bold">Drop files anywhere to process</p>
+        </div>
+    </div>
+
+    <div id="app" class="flex flex-col min-h-screen">
+        <!-- Header -->
+        <header class="bg-bg-panel shadow-md py-3 px-4 sm:px-6">
+            <div class="container mx-auto flex justify-between items-center">
+                 <div class="flex-1"></div> <!-- Spacer -->
+                <div class="text-center flex-shrink min-w-0 px-2">
+                     <h1 class="text-base sm:text-lg md:text-xl font-bold text-primary truncate">
+                        Free Image Converter, Resizer, and Compressor
+                        <span class="text-sm font-normal hidden md:inline">by 
+                            <a href="https://www.guidrezza.com/" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">Nick Drezza</a>
+                        </span>
+                    </h1>
+                </div>
+                <div class="flex-1 flex justify-end">
+                    <button id="theme-toggle" type="button" class="text-text-secondary hover:bg-bg-panel-light focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                        <svg id="theme-toggle-sun" class="w-5 h-5 hidden" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg id="theme-toggle-moon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <main class="flex-grow flex flex-col p-4 sm:p-6 md:p-8">
+            <!-- Initial View -->
+            <div id="initial-view" class="flex-grow flex items-center justify-center cursor-pointer">
+                <input type="file" id="file-input" multiple accept="image/*" class="hidden">
+                <div class="text-center text-secondary">
+                     <svg class="w-16 h-16 mb-4 text-text-tertiary mx-auto" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                    </svg>
+                    <p class="text-2xl font-semibold text-primary">Drag and drop files to get started</p>
+                    <p class="text-text-secondary mt-2">or <span class="text-accent hover:underline">click to browse</span></p>
+                    <p class="text-xs text-text-tertiary mt-6">Max file size: 20MB</p>
+                </div>
+            </div>
+
+            <!-- Files View -->
+            <div id="files-view" class="hidden flex-grow flex flex-col items-center">
+                <div class="w-full max-w-7xl">
+                    <div class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+                        <div class="text-center sm:text-left">
+                            <p class="text-lg font-semibold">Drag & drop more files anywhere</p>
+                            <p class="text-sm text-text-secondary">or <span id="browse-link" class="text-accent hover:underline cursor-pointer">click here to browse</span></p>
+                        </div>
+                        <button id="download-all-btn" class="py-2 px-5 rounded-md btn-primary transition-colors duration-300 w-full sm:w-auto">
+                            Download All (.zip)
+                        </button>
+                    </div>
+                    <div id="image-list" class="bg-panel rounded-lg max-h-[65vh] overflow-y-auto divide-y divide-divider-color">
+                        <!-- Image list items will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center py-4 px-4 sm:px-6 mt-auto text-xs text-text-tertiary border-t border-divider-color">
+            <p>This application runs entirely on your machine. It is 
+                <a href="https://github.com/guidrezza/free-image-converter-resizer-compressor" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">open-source</a>, serverless, and 100% free.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // --- CONFIGURATION & CONSTANTS ---
+        const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+        const fileStore = new Map();
+
+        // --- DOM ELEMENT REFERENCES ---
+        const initialView = document.getElementById('initial-view');
+        const filesView = document.getElementById('files-view');
+        const fileInput = document.getElementById('file-input');
+        const imageList = document.getElementById('image-list');
+        const browseLink = document.getElementById('browse-link');
+        const downloadAllBtn = document.getElementById('download-all-btn');
+        const dragOverlay = document.getElementById('drag-overlay');
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('theme-toggle-sun');
+        const moonIcon = document.getElementById('theme-toggle-moon');
+        const htmlEl = document.documentElement;
+
+        // --- THEME SWITCHER ---
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                htmlEl.classList.add('dark');
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+                localStorage.theme = 'dark';
+            } else {
+                htmlEl.classList.remove('dark');
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+                localStorage.theme = 'light';
+            }
+        }
+
+        // Check for saved theme on initial load. Default to light.
+        if (localStorage.theme === 'dark') {
+            setTheme('dark');
+        } else {
+            setTheme('light');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            setTheme(htmlEl.classList.contains('dark') ? 'light' : 'dark');
+        });
+
+        // --- GLOBAL DRAG & DROP HANDLING ---
+        let dragCounter = 0;
+        window.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragCounter++;
+            dragOverlay.classList.remove('hidden');
+            dragOverlay.classList.add('flex');
+        });
+        window.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter === 0) {
+                dragOverlay.classList.add('hidden');
+                dragOverlay.classList.remove('flex');
+            }
+        });
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragCounter = 0;
+            dragOverlay.classList.add('hidden');
+            dragOverlay.classList.remove('flex');
+            handleFiles(e.dataTransfer.files);
+        });
+        window.addEventListener('dragover', (e) => e.preventDefault()); // Prevents browser from opening file
+
+        // --- EVENT LISTENERS ---
+        initialView.addEventListener('click', () => fileInput.click());
+        browseLink.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+        downloadAllBtn.addEventListener('click', downloadAllAsZip);
+
+        // --- CORE FUNCTIONS ---
+        function handleFiles(files) {
+            const validFiles = Array.from(files).filter(file => {
+                if (!file.type.startsWith('image/')) {
+                    console.warn(`File skipped (not an image): ${file.name}`);
+                    return false;
+                }
+                if (file.size > MAX_FILE_SIZE) {
+                    alert(`File "${file.name}" is too large (>${MAX_FILE_SIZE / 1024 / 1024}MB) and will be skipped.`);
+                    return false;
+                }
+                return true;
+            });
+
+            if (validFiles.length > 0) {
+                initialView.classList.add('hidden');
+                filesView.classList.remove('hidden');
+            }
+            
+            validFiles.forEach(addFileToStore);
+            // BUG FIX: Reset input to allow re-uploading the same file
+            fileInput.value = '';
+        }
+
+        async function addFileToStore(file) {
+            const id = `file-${Date.now()}-${Math.random()}`;
+            const originalUrl = URL.createObjectURL(file);
+            const image = await createImageBitmap(file);
+            const originalExtension = file.name.split('.').pop().toLowerCase();
+            const validFormats = ['jpeg', 'jpg', 'png'];
+            const format = validFormats.includes(originalExtension) ? originalExtension : 'jpeg';
+
+            const fileData = {
+                id, file, originalUrl,
+                originalSize: file.size,
+                originalName: file.name,
+                originalWidth: image.width,
+                originalHeight: image.height,
+                originalExtension: format,
+                settings: {
+                    action: 'none', // none, resize, convert, compress
+                    format: format,
+                    width: image.width,
+                    height: image.height,
+                    quality: 85,
+                },
+                processedData: null,
+            };
+            fileStore.set(id, fileData);
+            createImageListItem(fileData);
+        }
+
+        async function processImage(id) {
+            const fileData = fileStore.get(id);
+            if (!fileData) return;
+            
+            const card = document.getElementById(id);
+            const newSizeEl = card.querySelector('.new-size');
+            newSizeEl.textContent = 'Processing...';
+
+            const { file, settings } = fileData;
+            const { action, format, width: newWidth, height: newHeight, quality } = settings;
+
+            const image = await createImageBitmap(file);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            let finalQuality = quality;
+            let qualityText = ''; // To hold the quality text for display
+
+            if (action === 'compress-size') {
+                 newSizeEl.textContent = 'Calculating...';
+                 const targetBytes = settings.targetSize * 1024;
+                 finalQuality = await findQualityForSize(canvas, image, format, targetBytes);
+                 fileData.settings.quality = finalQuality; // Update settings with found quality
+                 qualityText = ` (at ${finalQuality}%)`;
+            }
+            
+            canvas.width = action === 'resize' ? newWidth : image.width;
+            canvas.height = action === 'resize' ? newHeight : image.height;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+            const mimeType = `image/${format}`;
+            const qualityValue = (action === 'compress-percent' || action === 'compress-size') ? finalQuality / 100 : 0.85;
+
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    newSizeEl.textContent = 'Error processing';
+                    return;
+                }
+                const processedUrl = URL.createObjectURL(blob);
+                fileData.processedData = { blob, url: processedUrl, size: blob.size };
+                fileStore.set(id, fileData);
+                newSizeEl.textContent = `New size: ${formatBytes(blob.size)}${qualityText}`;
+            }, mimeType, qualityValue);
+        }
+
+        async function downloadAllAsZip() {
+            if (fileStore.size === 0) return;
+
+            const zip = new JSZip();
+            downloadAllBtn.textContent = 'Zipping...';
+            downloadAllBtn.disabled = true;
+
+            for (const [id, fileData] of fileStore.entries()) {
+                let dataToZip = fileData.processedData;
+                if (fileData.settings.action === 'none' && !dataToZip) {
+                    await new Promise(resolve => {
+                       processImage(id).finally(resolve);
+                    });
+                    dataToZip = fileStore.get(id).processedData;
+                }
+                
+                if (dataToZip) {
+                    const originalName = fileData.originalName.substring(0, fileData.originalName.lastIndexOf('.'));
+                    const extension = fileData.settings.format;
+                    
+                    let newFileName = `${originalName}.${extension}`;
+                    let counter = 1;
+                    while (zip.files[newFileName]) {
+                        newFileName = `${originalName} (${counter}).${extension}`;
+                        counter++;
+                    }
+                    zip.file(newFileName, dataToZip.blob);
+                }
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, "images.zip");
+            
+            downloadAllBtn.textContent = 'Download All (.zip)';
+            downloadAllBtn.disabled = false;
+        }
+
+        // --- UI FUNCTIONS ---
+        function createImageListItem(fileData) {
+            const { id, originalUrl, originalName, originalSize, originalWidth, originalHeight } = fileData;
+            const card = document.createElement('div');
+            card.id = id;
+            card.className = "bg-bg-panel p-2 flex flex-col sm:flex-row gap-3 items-center";
+            card.innerHTML = `
+                <img src="${originalUrl}" alt="Preview" class="w-12 h-12 rounded-md object-contain flex-shrink-0 bg-bg-main">
+                <div class="flex-grow text-center sm:text-left min-w-0">
+                    <p class="font-semibold truncate text-primary text-sm" title="${originalName}">${originalName}</p>
+                    <p class="text-xs text-secondary">${formatBytes(originalSize)}</p>
+                </div>
+                <div class="flex-shrink-0">
+                    <select class="action-select form-input p-2 rounded-md text-sm w-40">
+                        <option value="none" selected disabled hidden>Instruction</option>
+                        <option value="resize">Resize</option>
+                        <option value="convert">Convert</option>
+                        <option value="compress-percent">Compress by %</option>
+                        <option value="compress-size">Compress to size</option>
+                    </select>
+                </div>
+                <div class="action-controls-container flex-shrink-0 w-full sm:w-80 h-10 flex items-center justify-center sm:justify-start">
+                    <!-- Resize -->
+                    <div class="resize-controls hidden flex items-center gap-2">
+                         <div class="flex items-center border border-border-color rounded-md">
+                            <input type="number" class="resize-width form-input p-2 w-20 rounded-l-md text-sm border-0" value="${originalWidth}" min="1">
+                            <span class="text-text-tertiary bg-bg-panel-light px-2 py-2 border-l border-border-color">px</span>
+                         </div>
+                         <span class="text-text-tertiary text-lg">&times;</span>
+                         <div class="flex items-center border border-border-color rounded-md">
+                            <input type="number" class="resize-height form-input p-2 w-20 rounded-l-md text-sm border-0" value="${originalHeight}" min="1">
+                            <span class="text-text-tertiary bg-bg-panel-light px-2 py-2 border-l border-border-color">px</span>
+                        </div>
+                    </div>
+                    <!-- Convert -->
+                    <div class="convert-controls hidden">
+                        <select class="convert-format form-input p-2 rounded-md text-sm w-32">
+                            <option value="jpeg">JPEG</option>
+                            <option value="png">PNG</option>
+                            <option value="jpg">JPG</option>
+                        </select>
+                    </div>
+                    <!-- Compress by Percentage -->
+                    <div class="compress-percent-controls hidden flex items-center">
+                        <div class="flex items-center border border-border-color rounded-md">
+                            <input type="number" class="compress-quality form-input p-2 w-16 rounded-l-md text-sm border-0 text-center" value="85" min="1" max="100">
+                             <span class="text-text-tertiary bg-bg-panel-light px-2 py-2 border-l border-border-color">%</span>
+                            <div class="flex flex-col border-l border-border-color bg-bg-panel-light">
+                                <button class="quality-up px-1 py-0.5 hover:bg-border-color rounded-tr-sm">
+                                    <svg class="w-3 h-3 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7"></path></svg>
+                                </button>
+                                <button class="quality-down px-1 py-0.5 hover:bg-border-color rounded-br-sm border-t border-border-color">
+                                    <svg class="w-3 h-3 text-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Compress to Size -->
+                    <div class="compress-size-controls hidden flex items-center gap-2">
+                        <div class="flex items-center border border-border-color rounded-md">
+                            <input type="number" class="compress-target-size form-input p-2 w-24 rounded-l-md text-sm border-0" placeholder="" min="1">
+                            <span class="text-text-tertiary bg-bg-panel-light px-2 py-2 border-l border-border-color">KB</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="new-size text-xs text-accent w-full sm:w-40 text-center sm:text-right flex-shrink-0"></p>
+                <button class="remove-btn p-2 text-text-tertiary hover:text-red-500 rounded-full transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            imageList.appendChild(card);
+            addCardEventListeners(id);
+        }
+        
+        function addCardEventListeners(id) {
+            const card = document.getElementById(id);
+            const fileData = fileStore.get(id);
+
+            const actionSelect = card.querySelector('.action-select');
+            const resizeControls = card.querySelector('.resize-controls');
+            const convertControls = card.querySelector('.convert-controls');
+            const compressPercentControls = card.querySelector('.compress-percent-controls');
+            const compressSizeControls = card.querySelector('.compress-size-controls');
+            
+            actionSelect.addEventListener('change', (e) => {
+                const action = e.target.value;
+                fileData.settings.action = action;
+                fileData.settings.format = action === 'convert' ? card.querySelector('.convert-format').value : fileData.originalExtension;
+                
+                // Toggle visibility
+                resizeControls.classList.toggle('hidden', action !== 'resize');
+                convertControls.classList.toggle('hidden', action !== 'convert');
+                compressPercentControls.classList.toggle('hidden', action !== 'compress-percent');
+                compressSizeControls.classList.toggle('hidden', action !== 'compress-size');
+
+                if (action.startsWith('compress') || action === 'resize' || action === 'convert') processImage(id);
+                else card.querySelector('.new-size').textContent = '';
+            });
+
+            const resizeWidth = card.querySelector('.resize-width');
+            const resizeHeight = card.querySelector('.resize-height');
+            [resizeWidth, resizeHeight].forEach(el => el.addEventListener('input', () => {
+                fileData.settings.width = parseInt(resizeWidth.value) || fileData.originalWidth;
+                fileData.settings.height = parseInt(resizeHeight.value) || fileData.originalHeight;
+                debounce(processImage, 500)(id);
+            }));
+
+            card.querySelector('.convert-format').addEventListener('change', (e) => {
+                fileData.settings.format = e.target.value;
+                processImage(id);
+            });
+
+            const qualityInput = card.querySelector('.compress-quality');
+            const qualityUpBtn = card.querySelector('.quality-up');
+            const qualityDownBtn = card.querySelector('.quality-down');
+
+            const updateQuality = (newValue) => {
+                newValue = Math.max(1, Math.min(100, parseInt(newValue) || 0));
+                qualityInput.value = newValue;
+                fileData.settings.quality = newValue;
+                debounce(processImage, 400)(id);
+            };
+
+            let intervalId = null;
+            let timeoutId = null;
+            const startChangingQuality = (direction) => {
+                updateQuality(parseInt(qualityInput.value) + direction);
+                timeoutId = setTimeout(() => {
+                    intervalId = setInterval(() => {
+                        updateQuality(parseInt(qualityInput.value) + direction);
+                    }, 80); // repeat every 80ms
+                }, 400); // initial delay
+            };
+            const stopChangingQuality = () => {
+                clearTimeout(timeoutId);
+                clearInterval(intervalId);
+            };
+
+            qualityUpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startChangingQuality(1); });
+            qualityDownBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startChangingQuality(-1); });
+            
+            [qualityUpBtn, qualityDownBtn].forEach(btn => {
+                btn.addEventListener('mouseup', stopChangingQuality);
+                btn.addEventListener('mouseleave', stopChangingQuality);
+                btn.addEventListener('click', (e) => {
+                     e.preventDefault();
+                     // This click handler is intentionally simple because mousedown already covers single clicks.
+                });
+            });
+            qualityInput.addEventListener('input', () => updateQuality(qualityInput.value));
+
+            const targetSizeInput = card.querySelector('.compress-target-size');
+            targetSizeInput.addEventListener('change', () => {
+                const size = parseFloat(targetSizeInput.value);
+                if (!size || size <= 0) return;
+                fileData.settings.targetSize = size; // Always in KB
+                debounce(processImage, 500)(id);
+            });
+
+            card.querySelector('.remove-btn').addEventListener('click', () => {
+                fileStore.delete(id);
+                card.remove();
+                if (fileStore.size === 0) {
+                    filesView.classList.add('hidden');
+                    initialView.classList.remove('hidden');
+                }
+            });
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // --- NEW: ADVANCED COMPRESSION LOGIC ---
+        async function findQualityForSize(canvas, image, format, targetBytes, tolerance = 0.05, maxIterations = 7) {
+            const mimeType = `image/${format}`;
+            if (mimeType === 'image/png') return 100; // PNG compression isn't lossy by quality
+
+            const ctx = canvas.getContext('2d');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            ctx.drawImage(image, 0, 0);
+
+            let lowerBound = 0;
+            let upperBound = 100;
+            let bestQuality = 50;
+            let bestBlob = null;
+
+            const getBlob = (quality) => {
+                return new Promise(resolve => canvas.toBlob(resolve, mimeType, quality / 100));
+            };
+
+            for (let i = 0; i < maxIterations; i++) {
+                const currentQuality = Math.round((lowerBound + upperBound) / 2);
+                const blob = await getBlob(currentQuality);
+
+                if (!blob) break;
+
+                if (Math.abs(blob.size - targetBytes) < Math.abs((bestBlob ? bestBlob.size : Infinity) - targetBytes)) {
+                    bestQuality = currentQuality;
+                    bestBlob = blob;
+                }
+
+                if (Math.abs(blob.size - targetBytes) / targetBytes < tolerance) {
+                    return currentQuality; // Found a good enough match
+                }
+                
+                if (blob.size > targetBytes) {
+                    upperBound = currentQuality - 1;
+                } else {
+                    lowerBound = currentQuality + 1;
+                }
+                if (lowerBound > upperBound) break;
+            }
+            
+            return bestQuality;
+        }
+
+    </script>
+
+</body>
+</html>
+
