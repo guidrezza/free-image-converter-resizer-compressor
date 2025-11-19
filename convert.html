@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert Images - Open Image Kit</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div id="drop-overlay">
+        <div class="drop-message">Drop images to add to queue</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">
+                <span>Open Image Kit</span>
+            </a>
+            <nav>
+                <a href="index.html" class="btn btn-secondary">Back to Home</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="glass-panel" style="margin-bottom: 32px;">
+                <h1>Image Converter</h1>
+                <p>Batch convert your images to PNG, JPG, or WebP.</p>
+
+                <div style="margin-top: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                        <label for="file-input" class="btn btn-secondary">
+                            Select Images
+                        </label>
+                    </div>
+
+                    <div style="height: 40px; wudth: 1px; background: var(--glass-border);"></div>
+
+                    <select id="format-select" class="glass-input"
+                        style="padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--glass-border);">
+                        <option value="image/webp">Convert to WebP</option>
+                        <option value="image/jpeg">Convert to JPG</option>
+                        <option value="image/png">Convert to PNG</option>
+                    </select>
+
+                    <button id="convert-btn" class="btn btn-primary">Convert Images</button>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="glass-panel">
+                    <h3>Queue</h3>
+                    <div id="queue-container">
+                        <p class="text-muted">No images selected.</p>
+                    </div>
+                </div>
+
+                <div id="results-container">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/core/ImageProcessor.js"></script>
+    <script src="js/strategies/BaseStrategy.js"></script>
+    <script src="js/strategies/ConverterStrategy.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/pages/convert.js"></script>
+</body>
+
+</html>

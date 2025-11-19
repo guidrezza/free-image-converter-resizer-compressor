@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Image Kit - Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .pass {
+            color: #4caf50;
+        }
+
+        .fail {
+            color: #f44336;
+        }
+
+        .test-item {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Test Runner</h1>
+    <div id="results">Running tests...</div>
+
+    <!-- Load Modules -->
+    <script src="../js/core/ImageProcessor.js"></script>
+    <script src="../js/strategies/BaseStrategy.js"></script>
+    <script src="../js/strategies/ConverterStrategy.js"></script>
+    <script src="../js/strategies/ResizerStrategy.js"></script>
+    <script src="../js/strategies/CompressorStrategy.js"></script>
+    <script src="../js/strategies/UpscaleStrategy.js"></script>
+
+    <script>
+        const results = document.getElementById('results');
+        let passed = 0;
+        let failed = 0;
+
+        function log(msg, isPass) {
+            const div = document.createElement('div');
+            div.className = `test-item ${isPass ? 'pass' : 'fail'}`;
+            div.textContent = `${isPass ? '✔' : '✘'} ${msg}`;
+            results.appendChild(div);
+            if (isPass) passed++; else failed++;
+        }
+
+        async function runTests() {
+            results.innerHTML = '';
+
+            // Test 1: Queue Limit
+            try {
+                const processor = new ImageProcessor(); // Create fresh instance if possible, or use window.imageProcessor
+                // Note: window.imageProcessor is a singleton, so we should clear it first
+                window.imageProcessor.clearQueue();
+
+                const fakeFiles = Array(105).fill(new File([""], "test.png", { type: "image/png" }));
+                window.imageProcessor.addFiles(fakeFiles);
+
+                if (window.imageProcessor.queue.length === 100) {
+                    log('Queue limits to 100 files', true);
+                } else {
+                    log(`Queue limit failed: ${window.imageProcessor.queue.length}`, false);
+                }
+            } catch (e) {
+                log(`Queue limit test error: ${e.message}`, false);
+            }
+
+            // Test 2: Strategy Existence
+            if (window.ConverterStrategy && window.ResizerStrategy) {
+                log('Strategies loaded correctly', true);
+            } else {
+                log('Strategies missing', false);
+            }
+
+            // Test 3: Mock Execution (Converter)
+            try {
+                const strategy = new window.ConverterStrategy();
+                // We can't easily test canvas drawing in headless without a real image, 
+                // but we can check if the class is instantiated and has execute method.
+                if (typeof strategy.execute === 'function') {
+                    log('ConverterStrategy has execute method', true);
+                } else {
+                    log('ConverterStrategy missing execute method', false);
+                }
+            } catch (e) {
+                log(`Strategy test error: ${e.message}`, false);
+            }
+
+            // Summary
+            const summary = document.createElement('div');
+            summary.style.marginTop = '20px';
+            summary.style.fontWeight = 'bold';
+            summary.textContent = `Total: ${passed + failed} | Passed: ${passed} | Failed: ${failed}`;
+            results.appendChild(summary);
+        }
+
+        // Wait for scripts to load
+        window.onload = runTests;
+    </script>
+</body>
+
+</html>
