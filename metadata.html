@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Tools - Open Image Kit</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Exif-js for reading metadata -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+</head>
+
+<body>
+
+    <div id="drop-overlay">
+        <div class="drop-message">Drop images to add to queue</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <a href="index.html" class="logo">
+                <span>Open Image Kit</span>
+            </a>
+            <nav>
+                <a href="index.html" class="btn btn-secondary">Back to Home</a>
+            </nav>
+        </header>
+
+        <main>
+            <div class="glass-panel" style="margin-bottom: 32px;">
+                <h1>Metadata Tools</h1>
+                <p>View EXIF data or strip all metadata for privacy.</p>
+
+                <div style="margin-top: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+                        <label for="file-input" class="btn btn-secondary">
+                            Select Images
+                        </label>
+                    </div>
+
+                    <div style="height: 40px; width: 1px; background: var(--glass-border);"></div>
+
+                    <select id="action-select" class="glass-input"
+                        style="padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); color: white; border: 1px solid var(--glass-border);">
+                        <option value="view">View Metadata</option>
+                        <option value="scrub">Scrub (Remove) Metadata</option>
+                    </select>
+
+                    <button id="action-btn" class="btn btn-primary">View Metadata</button>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="glass-panel">
+                    <h3>Queue</h3>
+                    <div id="queue-container">
+                        <p class="text-muted">No images selected.</p>
+                    </div>
+                </div>
+
+                <div id="results-container">
+                    <!-- Results will appear here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/core/ImageProcessor.js"></script>
+    <script src="js/strategies/BaseStrategy.js"></script>
+    <script src="js/strategies/MetadataStrategy.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/pages/metadata.js"></script>
+</body>
+
+</html>
